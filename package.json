@@ -1,0 +1,30 @@
+{
+  "name": "kontrolview",
+  "version": "0.1.0",
+  "description": "Displays Current assigned programms from Midi-Mixer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron-forge start",
+    "backend": "node backend.js",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "author": "FakeApate",
+  "license": "MIT",
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.0",
+    "exiftool-vendored": "^21.5.1",
+    "extract-file-icon": "^0.3.2",
+    "socket.io": "^4.6.1",
+    "socket.io-client": "^4.6.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.1.1",
+    "@electron-forge/maker-deb": "^6.1.1",
+    "@electron-forge/maker-rpm": "^6.1.1",
+    "@electron-forge/maker-squirrel": "^6.1.1",
+    "@electron-forge/maker-zip": "^6.1.1",
+    "electron": "^24.1.1"
+  }
+}
