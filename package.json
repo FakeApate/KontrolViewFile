@@ -1,6 +1,6 @@
 {
   "name": "kontrolview",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Displays Current assigned programms from Midi-Mixer",
   "main": "index.js",
   "scripts": {
@@ -13,9 +13,8 @@
   "author": "FakeApate",
   "license": "MIT",
   "dependencies": {
+    "electron-log": "^4.4.8",
     "electron-squirrel-startup": "^1.0.0",
-    "exiftool-vendored": "^21.5.1",
-    "file-icon-extractor": "^1.0.4",
     "socket.io": "^4.6.1",
     "socket.io-client": "^4.6.1"
   },

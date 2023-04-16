@@ -1,62 +1,71 @@
+///Imports
 const http = require("http");
-const server = http.createServer();
-const { Server } = require("socket.io");
-const io = new Server(server);
 const fs = require("fs");
-const icon = require('file-icon-extractor');
-const exiftool = require("exiftool-vendored").exiftool;
+const { Server } = require("socket.io");
+const exec = require("child_process").execFile;
+const util = require("util");
+const execFile = util.promisify(require("child_process").execFile);
+///Const
+const server = http.createServer();
+const io = new Server(server);
 
-class MixerInfo {
-  constructor() {
-    this.read();
-    fs.watchFile(this.userSettPath, () => {
-      this.read();
-    });
-  }
+///Vars
+let activeGroups = [];
+let userSettPath;
+let userSettings;
+let deviceId;
+let device;
+let profilePath;
+let profile;
+[userSettPath, userSettings, deviceId, device, profilePath, profile] =
+  read_mixer_files();
 
-  async read() {
-    delete this.list;
-    this.userSettPath = `${process.env.APPDATA}/midi-mixer-app/user-settings.json`;
-    this.userSettings = JSON.parse(fs.readFileSync(this.userSettPath, "utf-8"));
-    this.deviceId = Object.keys(this.userSettings.activeMidiDevices)[0];
-    this.device = this.userSettings.device[this.deviceId];
-    this.profilePath = `${process.env.APPDATA}/midi-mixer-app/profiles/${this.deviceId}/spec.json`;
-    this.profile = JSON.parse(fs.readFileSync(this.profilePath, "utf-8"));
-
-    this.getList().then(() => {
-      io.emit("mixerInfo", this.list);
-    });
-  }
-
-  async getList() {
-    const keys = Object.keys(this.device.groups);
-
-    for (var keyIndex in keys) {
-      const key = keys[keyIndex];
-      const group = this.device.groups[key][0];
-      const groupNum = this.profile.groups[key].name.split(" ")[1];
-      if (group.type === "session") {
-        const stats = await exiftool.read(group.paths[0]);
-        icon.extract(this.device.groups[key][0].paths[0],"");
-        const img = `data:image/jpg;base64,${fs.readFileSync(stats.FileName.replace("exe","png")).toString("base64")}`
-        if (this.list) {
-          this.list.push({
-            num: groupNum,
-            name: stats.ProductName,
-            icon: img,
-          });
-        } else {
-          this.list = [{ num: groupNum, name: stats.ProductName, icon: img }];
-        }
-      }
-    }
-  }
-}
-
-const mixerInfo = new MixerInfo();
+///Events
+fs.watchFile(userSettPath, () => {
+  [userSettPath, userSettings, deviceId, device, profilePath, profile] =
+    read_mixer_files();
+  dataTransfer();
+});
 
 io.on("connection", () => {
-  mixerInfo.read();
+  read_mixer_files();
+  dataTransfer();
 });
 
 server.listen(3000);
+
+///Parsing Setting files from Midi Mixer App
+function read_mixer_files() {
+  const userSettPath = `${process.env.APPDATA}/midi-mixer-app/user-settings.json`;
+  const userSettings = JSON.parse(fs.readFileSync(userSettPath, "utf-8"));
+  const deviceId = Object.keys(userSettings.activeMidiDevices)[0];
+  const device = userSettings.device[deviceId];
+  const profilePath = `${process.env.APPDATA}/midi-mixer-app/profiles/${deviceId}/spec.json`;
+  const profile = JSON.parse(fs.readFileSync(profilePath, "utf-8"));
+
+  return [userSettPath, userSettings, deviceId, device, profilePath, profile];
+}
+
+/// Calling nativ application to get the icon and product name
+/// Emitting event for front-end
+async function dataTransfer() {
+  const keys = Object.keys(device.groups);
+  for (var keyIndex in keys) {
+    const key = keys[keyIndex];
+    const group = device.groups[key][0];
+    const groupNum = profile.groups[key].name.split(" ")[1];
+    if (group.type === "session") {
+      var path = "";
+      if(fs.existsSync("resources/app/KontrolViewFileInfo.exe")){
+        path = "resources/app/";
+      }
+      const { stdout } = await execFile(path+"KontrolViewFileInfo.exe", [
+        group.paths[0],
+      ]);
+      let result = JSON.parse(stdout.toString());
+      result.num = groupNum;
+      activeGroups[result.num] = result;
+    }
+  }
+  io.emit("mixerInfo", activeGroups);
+}

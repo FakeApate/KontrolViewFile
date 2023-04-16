@@ -1,27 +1,41 @@
 const { io } = require("socket.io-client");
-const { exec } = require("child_process");
+var socket = io("http://localhost:3000/");
+socket.on("mixerInfo", incomingData);
 
-window.addEventListener("DOMContentLoaded", () => {
-  var socket = io("http://localhost:3000/");
-  socket.on("mixerInfo", function (data) {
-    let inactiveControlls = [1,2,3,4,5,6,7,8];
-    for (var groupIndex in data) {
-      var group = data[groupIndex];
-      var tid = "titel_" + group.num;
-      var iid = "image_" + group.num;
-      var title = document.getElementById(tid);
-      var img = document.getElementById(iid);
-      title.innerText = group.name;
-      img.src = group.icon;
+function incomingData(data){
+  let visibleColIndexes = [];
+  for (var groupIndex in data) {
 
-      document.getElementsByClassName("col")[group.num-1].style.opacity = 1;
-      inactiveControlls = inactiveControlls.filter((value) => {
-        return value != group.num;
-      });
+    var group = data[groupIndex];
+
+    //catch any null members
+    if (group == null) {
+      continue;
     }
 
-    inactiveControlls.forEach((index) => {
-      document.getElementsByClassName("col")[index-1].style.opacity = 0;
-    })
-  });
-});
+    //Getting Elements
+    var tid = "titel_" + group.num;
+    var iid = "image_" + group.num;
+    var title = document.getElementById(tid);
+    var img = document.getElementById(iid);
+
+    //Update content
+    title.innerText = group.name;
+    img.src = group.icon;
+
+    //add index to the visible Cols
+    visibleColIndexes.push(group.num - 1);
+  }
+
+  updateOpacity(visibleColIndexes);
+}
+
+function updateOpacity(visibleColIndexes){
+  let cols = document.getElementsByClassName("col");
+  for (var i = 0; i < cols.length; i++) {
+    cols[i].style.opacity = 0;
+  }
+  for (var i = 0; i < visibleColIndexes.length; i++) {
+    cols[visibleColIndexes[i]].style.opacity = 1;
+  }
+}

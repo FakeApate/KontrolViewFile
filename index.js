@@ -1,6 +1,9 @@
 const { app, BrowserWindow } = require("electron");
-const path = require('path')
-const backend = require("./backend");
+if (require('electron-squirrel-startup')) app.quit();
+const path = require("path");
+const log = require("electron-log");
+require("./backend");
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1330,
@@ -8,14 +11,15 @@ const createWindow = () => {
     autoHideMenuBar: true,
     kiosk: false,
     webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        nodeIntegration: true,
-      }
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+    },
   });
-  
+
   win.loadFile("index.html");
+
   win.addListener("moved", () => {
-    console.log(win.getPosition());
+    log.debug(win.getPosition());
   });
 };
 
@@ -26,4 +30,3 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
-
