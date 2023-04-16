@@ -15,7 +15,7 @@
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
     "exiftool-vendored": "^21.5.1",
-    "extract-file-icon": "^0.3.2",
+    "file-icon-extractor": "^1.0.4",
     "socket.io": "^4.6.1",
     "socket.io-client": "^4.6.1"
   },
