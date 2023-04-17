@@ -1,0 +1,13 @@
+{
+    "include": ["./src/**/*"],
+    "exclude": ["./build/**/*"],
+    "compilerOptions": {
+        "outDir": "./build",
+        "allowJs": false,
+        "target": "ES6",
+        "moduleResolution": "nodenext",
+        "allowSyntheticDefaultImports": true,
+        "strictNullChecks": true,
+    }
+    
+}
