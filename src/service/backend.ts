@@ -1,46 +1,76 @@
-import * as http from 'http';
-import * as fs from 'fs';
-import {Server} from 'socket.io';
-import execFile from 'child_process';
+import * as cp from "child_process";
+import * as fs from "fs";
+import * as http from "http";
+import { Server } from "socket.io";
+import {
+  UserSettings,
+  Profile,
+  Device,
+  ActiveGroup,
+  GroupV1,
+  ActiveSession,
+} from "./UserSettings.js";
+import { appdataError, getNativeExePath } from "./Errors.js";
 
 const server = http.createServer();
 const io = new Server(server);
-const appdata = process.env.APPDATA ?? '';
+const appdata = process.env.APPDATA ?? appdataError();
 const userSettingsPath = `${appdata}/midi-mixer-app/user-settings.json`;
+const nativeExePath = getNativeExePath();
 
-io.on('connection', () => {
-	//
-});
+let userSettings: UserSettings;
+let profile: Profile;
+let device: Device;
 
-server.listen(3000);
+export function start() {
+  io.on("connection", () => {
+    readSettings();
+    retrieveAndEmitActiveGroupsData();
+  });
 
-fs.watchFile(userSettingsPath, () => {
-	const userSettings: UserSettings = JSON.parse(fs.readFileSync(userSettingsPath, 'utf-8')) as UserSettings;
-	const deviceId = Object.keys(userSettings.activeMidiDevices)[0];
-	const device: Dev = userSettings.device[deviceId];
-	const profilePath = `${appdata}/midi-mixer-app/profiles/${deviceId}/spec.json`;
-	const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf-8')) as Profile;
-});
+  server.listen(3000);
 
-type UserSettings = {
-	activeMidiDevices: Record<string, boolean>;
-	device: Record<string, Dev>;
-};
+  fs.watchFile(userSettingsPath, () => {
+    readSettings();
+    retrieveAndEmitActiveGroupsData();
+  });
+}
 
-type Dev = {
-	groups: Record<string, GroupV1 | GroupV2>;
-};
+function readSettings() {
+  userSettings = JSON.parse(
+    fs.readFileSync(userSettingsPath, "utf-8")
+  ) as UserSettings;
+  const deviceId = Object.keys(userSettings.activeMidiDevices)[0];
+  device = userSettings.device[deviceId];
+  const profilePath = `${appdata}/midi-mixer-app/profiles/${deviceId}/spec.json`;
+  profile = JSON.parse(fs.readFileSync(profilePath, "utf-8")) as Profile;
+}
 
-type GroupV1 = {
-	type: string;
-	paths: string[];
-};
+function retrieveAndEmitActiveGroupsData() {
+  const keys = Object.keys(device.groups);
+  const activeGroups = new Array<ActiveGroup>();
+  for (const key of keys) {
+    let group = device.groups[key][0];
+    if (group.type === "session") {
+      group = group as GroupV1;
+      const agroup: ActiveGroup = {
+        pathToExe: group.paths[0],
+        icon: undefined,
+        name: undefined,
+        num: Number(profile.groups[key].name.split(" ")[1]),
+      };
+      activeGroups.push(agroup);
+    }
+  }
 
-type GroupV2 = {
-	type: string;
-	id: string;
-};
-
-type Profile = {
-	name: string;
-};
+  activeGroups.forEach((element, index) => {
+    const buffer = cp
+      .execFileSync(nativeExePath, [element.pathToExe])
+      .toString("utf-8");
+    activeGroups[index] = {
+      ...element,
+      ...(JSON.parse(buffer) as ActiveSession),
+    };
+  });
+  io.emit("mixerInfo", activeGroups);
+}
